@@ -1241,73 +1241,276 @@ body.is-home .home-stack {
   color: #fff;
 }
 
-.process-steps__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-}
 
-.process-step {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 16px;
+
+
+/* ─── Process Rows ─────────────────────────────────────────── */
+
+.process-rows {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 32px;
+}
+
+.process-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 28px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.3);
 }
 
-.process-step__header {
+/* Even rows: slideshow left, text right — achieved by DOM order swap */
+/* No extra CSS needed; DOM order handles it. */
+
+.process-row__text {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: flex-start;
 }
 
-.process-step__number {
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
+.process-row__number {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: rgba(120, 170, 210, 0.24);
   border: 1px solid rgba(120, 170, 210, 0.52);
   color: #fff;
   font-weight: 700;
+  font-size: 15px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
-  letter-spacing: 0;
-  font-size: 14px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  margin-bottom: 4px;
 }
 
-.process-step__title {
-  margin: 0 0 4px;
-  font-size: 1rem;
-  color: #fff;
-}
-
-.process-step__summary {
+.process-row__title {
   margin: 0;
-  color: rgba(235, 245, 255, 0.82);
-  line-height: 1.5;
-  font-size: 0.95rem;
+  font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+  color: #fff;
+  line-height: 1.2;
 }
 
-.process-step__details {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  margin-top: 6px;
-  padding-top: 10px;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition:
-    max-height 0.25s ease,
-    opacity 0.25s ease;
-  color: rgba(235, 245, 255, 0.82);
+.process-row__summary {
+  margin: 0;
+  color: rgba(235, 245, 255, 0.92);
+  font-size: 1rem;
   line-height: 1.55;
+  font-weight: 500;
 }
+
+.process-row__detail {
+  margin: 0;
+  color: rgba(235, 245, 255, 0.72);
+  font-size: 0.93rem;
+  line-height: 1.65;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+}
+
+/* ─── Slideshow ─────────────────────────────────────────────── */
+.process-row__slideshow {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  aspect-ratio: 16 / 10;
+  isolation: isolate;
+
+  --wipe-duration: 750ms;
+  --wipe-easing: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.process-row__slides {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.process-row__slide {
+  position: absolute;
+  inset: 0;
+
+  clip-path: inset(0 100% 0 0);
+
+  pointer-events: none;
+  user-select: none;
+  backface-visibility: hidden;
+}
+
+.process-row__slide.is-active {
+  clip-path: inset(0 0 0 0);
+  z-index: 2;
+}
+
+.process-row__slide.is-entering,
+.process-row__slide.is-entering-left,
+.process-row__slide.is-exiting,
+.process-row__slide.is-exiting-right {
+  will-change: clip-path;
+}
+
+
+/* Forward navigation */
+
+.process-row__slide.is-entering {
+  clip-path: inset(0 100% 0 0);
+  animation: wipe-in-from-right var(--wipe-duration)
+    var(--wipe-easing) forwards;
+  z-index: 3;
+}
+
+.process-row__slide.is-exiting {
+  clip-path: inset(0 0 0 0);
+  animation: wipe-out-to-left var(--wipe-duration)
+    var(--wipe-easing) forwards;
+  z-index: 2;
+}
+
+
+/* Backward navigation */
+
+.process-row__slide.is-entering-left {
+  clip-path: inset(0 0 0 100%);
+  animation: wipe-in-from-left var(--wipe-duration)
+    var(--wipe-easing) forwards;
+  z-index: 3;
+}
+
+.process-row__slide.is-exiting-right {
+  clip-path: inset(0 0 0 0);
+  animation: wipe-out-to-right var(--wipe-duration)
+    var(--wipe-easing) forwards;
+  z-index: 2;
+}
+
+
+@keyframes wipe-in-from-right {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes wipe-in-from-left {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes wipe-out-to-left {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+@keyframes wipe-out-to-right {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+
+.process-row__slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ─── Dot Indicators ────────────────────────────────────────── */
+
+.process-row__dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+  z-index: 10;
+}
+
+.process-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.process-row__dot.is-active {
+  background: rgba(120, 170, 210, 0.95);
+  transform: scale(1.25);
+}
+
+.process-row__dot:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+/* ─── Reduced Motion ────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .process-row__slide.is-entering,
+  .process-row__slide.is-entering-left,
+  .process-row__slide.is-exiting,
+  .process-row__slide.is-exiting-right {
+    animation: none;
+    clip-path: inset(0 0% 0 0);
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .process-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  /* On mobile, slideshow always comes first regardless of DOM order */
+  .process-row__slideshow {
+    order: -1;
+  }
+
+  .process-row__text {
+    order: 1;
+  }
+
+  .process-row__slides {
+    /* On mobile, give the slides container a concrete height since
+       the parent aspect-ratio handles it via .process-row__slideshow */
+    height: 100%;
+  }
+}
+
+
 
 .process-step__details p {
   margin: 0;
@@ -1318,24 +1521,7 @@ body.is-home .home-stack {
   opacity: 1;
 }
 
-.process-step__toggle {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 11px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.87rem;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease;
-}
+
 
 .process-step__toggle:hover,
 .process-step__toggle:focus-visible {
@@ -1345,10 +1531,7 @@ body.is-home .home-stack {
   transform: translateY(-1px);
 }
 
-.process-step__chevron {
-  display: inline-block;
-  transition: transform 0.2s ease;
-}
+
 
 .process-step.is-open .process-step__chevron {
   transform: rotate(90deg);

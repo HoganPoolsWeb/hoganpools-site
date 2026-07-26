@@ -1323,7 +1323,7 @@ body.is-home .home-stack {
   aspect-ratio: 16 / 10;
   isolation: isolate;
 
-  --wipe-duration: 750ms;
+  --wipe-duration: 450ms;
   --wipe-easing: cubic-bezier(0.65, 0, 0.35, 1);
 }
 

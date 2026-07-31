@@ -7,9 +7,10 @@
       return () => {};
     }
 
+    const hero = root.querySelector('.gallery-project-card__hero');
     const heroImg = root.querySelector('.gallery-project-card__hero img');
     const thumbs = Array.from(root.querySelectorAll('.gallery-project-card__grid img'));
-    if (!heroImg || thumbs.length === 0) {
+    if (!hero || !heroImg || thumbs.length === 0) {
       return () => {};
     }
 
@@ -28,6 +29,79 @@
 
     root.dataset.galleryCardInitialized = 'true';
     heroImg.style.transition = `opacity ${FADE_MS}ms ease`;
+
+    const requestFullscreen = (element) => {
+      const request = element.requestFullscreen || element.webkitRequestFullscreen;
+      if (!request) return Promise.reject(new Error('Fullscreen is unavailable'));
+      return request.call(element);
+    };
+
+    const exitFullscreen = () => {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (!exit) return Promise.resolve();
+      return exit.call(document);
+    };
+
+    const getFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+    const unlockOrientation = () => {
+      try {
+        screen.orientation?.unlock?.();
+      } catch {
+        // Orientation unlock is best-effort and browser-dependent.
+      }
+    };
+
+    const lockLandscape = async () => {
+      try {
+        await screen.orientation?.lock?.('landscape');
+      } catch {
+        // Some mobile browsers do not allow programmatic orientation lock.
+      }
+    };
+
+    const fullscreenButton = document.createElement('button');
+    fullscreenButton.type = 'button';
+    fullscreenButton.className = 'gallery-project-card__fullscreen';
+    fullscreenButton.setAttribute('aria-label', 'View image fullscreen');
+    fullscreenButton.innerHTML = `
+      <span class="gallery-project-card__fullscreen-icon" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      <span class="sr-only">View image fullscreen</span>
+    `;
+    hero.append(fullscreenButton);
+
+    const onFullscreenClick = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      try {
+        if (getFullscreenElement() === hero) {
+          await exitFullscreen();
+          unlockOrientation();
+          return;
+        }
+
+        await requestFullscreen(hero);
+        await lockLandscape();
+      } catch {
+        // Fullscreen/orientation support varies; leave the normal gallery usable.
+      }
+    };
+
+    const onFullscreenChange = () => {
+      const isFullscreen = getFullscreenElement() === hero;
+      fullscreenButton.classList.toggle('is-fullscreen', isFullscreen);
+      fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen image' : 'View image fullscreen');
+      if (!isFullscreen) {
+        unlockOrientation();
+      }
+    };
+
+    fullscreenButton.addEventListener('click', onFullscreenClick);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
     let currentIndex = Math.max(
       0,
@@ -170,6 +244,10 @@
       stopAutoAdvance();
       transitionToken += 1;
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      fullscreenButton.removeEventListener('click', onFullscreenClick);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      fullscreenButton.remove();
       thumbHandlers.forEach(({ thumb, onClick, onKeyDown }) => {
         thumb.removeEventListener('click', onClick);
         thumb.removeEventListener('keydown', onKeyDown);

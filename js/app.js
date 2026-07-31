@@ -1,5 +1,6 @@
 // /js/app.js
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
+import { cleanupProcessPage, initProcessPage } from "./process-page.js";
 import { getRouteFromHref, getRouteFromLocation, loadRoute, routeToPath } from "./router.js";
 
 const app = document.getElementById("app");
@@ -902,6 +903,7 @@ let currentRoute = getRouteFromLocation();
 let isTransitioning = false;
 
 async function renderRouteIntoCurrent(route) {
+  cleanupProcessPage();
   syncRouteBodyClasses(route);
   await ensureRouteAssets(route);
   const payload = await loadRoute(route, app);
@@ -911,6 +913,9 @@ async function renderRouteIntoCurrent(route) {
   initObfuscatedPhoneLinks(document);
   if (route === "gallery") {
     await initializeGalleryProjectCards(app || document);
+  }
+  if (route === "process") {
+    initProcessPage(app || document);
   }
   syncHomeHeroPriority(route);
   if (route === "financing") {
@@ -999,6 +1004,7 @@ async function slideCardNavigate(route, dir) {
     // padding (e.g. Gunite) is correct on first paint during the transition.
     syncRouteBodyClasses(route);
     await ensureRouteAssets(route);
+    cleanupProcessPage();
     const payload = await loadRoute(route, app);
     syncStageShell(route, payload?.shell);
     syncHeaderNavState(route);
@@ -1006,6 +1012,9 @@ async function slideCardNavigate(route, dir) {
     initObfuscatedPhoneLinks(document);
     if (route === "gallery") {
       await initializeGalleryProjectCards(app || document);
+    }
+    if (route === "process") {
+      initProcessPage(app || document);
     }
     if (route === "financing") {
       window.initHearthCalculator?.();
@@ -1169,6 +1178,7 @@ async function boot() {
   }
 
   document.addEventListener("keydown", (e) => {
+    if (e.target?.closest?.(".process-row__slideshow")) return;
     if (e.key === "ArrowLeft") onStageControl(-1);
     if (e.key === "ArrowRight") onStageControl(1);
   });

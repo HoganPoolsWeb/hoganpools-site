@@ -1,4 +1,6 @@
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
+import { cleanupProcessPage, initProcessPage } from "./process-page.js";
+import { loadRoute } from "./router.js";
 
 (() => {
   const BG_VIDEO_BASELINE_SRC = "/assets/video/water720p-baseline.mp4";
@@ -25,6 +27,8 @@ import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
     careers: "/careers/",
   };
   let hasArmedBackgroundVideoRetry = false;
+  let currentRoute = getRouteFromLocation();
+  let isStageTransitioning = false;
 
   function normalizePath(pathname = "/") {
     const base = pathname.trim() || "/";
@@ -45,6 +49,16 @@ import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
     const index = ROUTE_ORDER.indexOf(current);
     const nextIndex = (index + direction + ROUTE_ORDER.length) % ROUTE_ORDER.length;
     return ROUTE_ORDER[nextIndex];
+  }
+
+  function getDirection(fromRoute, toRoute) {
+    const fromIndex = ROUTE_ORDER.indexOf(fromRoute);
+    const toIndex = ROUTE_ORDER.indexOf(toRoute);
+    if (fromIndex === -1 || toIndex === -1) return "forward";
+
+    const forwardDistance = (toIndex - fromIndex + ROUTE_ORDER.length) % ROUTE_ORDER.length;
+    const backwardDistance = (fromIndex - toIndex + ROUTE_ORDER.length) % ROUTE_ORDER.length;
+    return forwardDistance <= backwardDistance ? "forward" : "backward";
   }
 
   function revealBackgroundVideoWhenReady(videoEl, reveal) {
@@ -599,19 +613,212 @@ import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
   }
 
   function initStageControls() {
-    const prevButton = document.querySelector(".stage__control--left");
-    const nextButton = document.querySelector(".stage__control--right");
+    const stage = document.querySelector(".stage");
+    if (!stage) return;
+
+    let prevButton = stage.querySelector(".stage__control--left");
+    let nextButton = stage.querySelector(".stage__control--right");
+    const shouldCreateControls = Boolean(document.querySelector(".process-page"));
+
+    if (!prevButton && shouldCreateControls) {
+      prevButton = document.createElement("button");
+      prevButton.className = "stage__control stage__control--left";
+      prevButton.type = "button";
+      prevButton.setAttribute("aria-label", "Previous section");
+      prevButton.textContent = "‹";
+      stage.prepend(prevButton);
+    }
+
+    if (!nextButton && shouldCreateControls) {
+      nextButton = document.createElement("button");
+      nextButton.className = "stage__control stage__control--right";
+      nextButton.type = "button";
+      nextButton.setAttribute("aria-label", "Next section");
+      nextButton.textContent = "›";
+      stage.append(nextButton);
+    }
+
     if (!prevButton && !nextButton) return;
+    if (stage.dataset.stageControlsBound === "true") return;
+    stage.dataset.stageControlsBound = "true";
+
+    const stageCard = stage.querySelector(".stage__card");
+    const stageContent = stage.querySelector(".stage__content");
+
+    const setStageTransitioning = (active) => {
+      isStageTransitioning = active;
+      document.body.classList.toggle("is-stage-transitioning", active);
+    };
+
+    const prefersReducedMotion = () =>
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+
+    const parseTime = (value) => {
+      const trimmed = value.trim();
+      if (!trimmed) return 0;
+      if (trimmed.endsWith("ms")) return parseFloat(trimmed);
+      if (trimmed.endsWith("s")) return parseFloat(trimmed) * 1000;
+      return 0;
+    };
+
+    const waitForCardTransformEnd = () => {
+      if (!stageCard) return Promise.resolve();
+      return new Promise((resolve) => {
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          stageCard.removeEventListener("transitionend", onEnd);
+          window.clearTimeout(fallbackTimer);
+          resolve();
+        };
+        const onEnd = (event) => {
+          if (event.propertyName !== "transform") return;
+          finish();
+        };
+        stageCard.addEventListener("transitionend", onEnd);
+
+        const style = getComputedStyle(stageCard);
+        const durations = style.transitionDuration.split(",").map(parseTime);
+        const delays = style.transitionDelay.split(",").map(parseTime);
+        const maxTransitionMs = durations.reduce((max, duration, index) => {
+          const delay = delays[index] ?? delays[delays.length - 1] ?? 0;
+          return Math.max(max, duration + delay);
+        }, 0);
+        const fallbackTimer = window.setTimeout(finish, Math.max(700, maxTransitionMs + 120));
+      });
+    };
+
+    const syncHeaderNavState = (route) => {
+      const navLinks = Array.from(document.querySelectorAll("#site-nav a"));
+      const currentPath = routeToPath(route);
+      navLinks.forEach((link) => {
+        const linkUrl = new URL(link.href, window.location.origin);
+        if (normalizePath(linkUrl.pathname) === currentPath) {
+          link.setAttribute("aria-current", "page");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    };
+
+    const syncRouteBodyClasses = (route) => {
+      document.body.classList.toggle("is-home", route === "home");
+    };
+
+    const syncStageShell = (route, shell = {}) => {
+      const stageClassNames = new Set((shell.stageClassName || "stage").split(/\s+/).filter(Boolean));
+      stageClassNames.add("stage");
+      [
+        "is-intro",
+        "is-ready",
+        "is-controls",
+        "is-sliding",
+        "stage-prep",
+        "slide-out-left",
+        "slide-out-right",
+        "slide-in-from-left",
+        "slide-in-from-right",
+      ].forEach((className) => stageClassNames.delete(className));
+
+      if (route === "home") {
+        stageClassNames.delete("stage--static");
+      } else {
+        stageClassNames.add("stage--static");
+      }
+
+      stageClassNames.add("is-ready");
+      stageClassNames.add("is-controls");
+      stage.className = Array.from(stageClassNames).join(" ");
+    };
+
+    const renderRoute = async (route) => {
+      cleanupProcessPage();
+      syncRouteBodyClasses(route);
+      const payload = await loadRoute(route, stageContent);
+      if (!payload) return false;
+      syncStageShell(route, payload.shell);
+      if (payload.shell?.contentClassName) {
+        stageContent.className = payload.shell.contentClassName;
+      }
+      syncHeaderNavState(route);
+      initObfuscatedPhoneLinks(document);
+      if (route === "process") {
+        initProcessPage(stageContent || document);
+      }
+      currentRoute = route;
+      return true;
+    };
+
+    const slideNavigate = async (route, direction, options = {}) => {
+      if (isStageTransitioning || !stageCard || !stageContent) return;
+
+      if (prefersReducedMotion()) {
+        if (await renderRoute(route)) {
+          if (options.updateHistory !== false) {
+            history.pushState({ route }, "", routeToPath(route));
+          }
+        }
+        return;
+      }
+
+      const slideOutClass = direction === "right" ? "slide-out-left" : "slide-out-right";
+      const slideInClass = direction === "right" ? "slide-in-from-right" : "slide-in-from-left";
+
+      setStageTransitioning(true);
+
+      try {
+        stage.classList.add("is-sliding", "stage-prep");
+        stage.classList.remove("slide-out-left", "slide-out-right", "slide-in-from-left", "slide-in-from-right");
+        stageCard.getBoundingClientRect();
+        stage.classList.remove("stage-prep");
+        stage.classList.add(slideOutClass);
+
+        await waitForCardTransformEnd();
+        const rendered = await renderRoute(route);
+        if (!rendered) return;
+        if (options.updateHistory !== false) {
+          history.pushState({ route }, "", routeToPath(route));
+        }
+
+        stage.classList.add("is-sliding", "stage-prep");
+        stage.classList.remove(slideOutClass);
+        stage.classList.add(slideInClass);
+        stageCard.getBoundingClientRect();
+        stage.classList.remove("stage-prep");
+        stageCard.getBoundingClientRect();
+        stage.classList.remove(slideInClass);
+
+        await waitForCardTransformEnd();
+      } finally {
+        stage.classList.remove("is-sliding", "stage-prep", "slide-out-left", "slide-out-right", "slide-in-from-left", "slide-in-from-right");
+        setStageTransitioning(false);
+      }
+    };
 
     const onStageControl = (direction) => {
       const nextRoute = getNextRoute(direction);
       const nextPath = routeToPath(nextRoute);
       if (!nextPath || nextPath === normalizePath(window.location.pathname)) return;
-      window.location.href = nextPath;
+      slideNavigate(nextRoute, direction > 0 ? "right" : "left");
     };
 
     prevButton?.addEventListener("click", () => onStageControl(-1));
     nextButton?.addEventListener("click", () => onStageControl(1));
+    document.addEventListener("keydown", (event) => {
+      if (event.target?.closest?.(".process-row__slideshow")) return;
+      if (event.key === "ArrowLeft") onStageControl(-1);
+      if (event.key === "ArrowRight") onStageControl(1);
+    });
+
+    window.addEventListener("popstate", () => {
+      const nextRoute = getRouteFromLocation();
+      if (nextRoute === currentRoute) return;
+      const direction = getDirection(currentRoute, nextRoute);
+      slideNavigate(nextRoute, direction === "forward" ? "right" : "left", {
+        updateHistory: false,
+      });
+    });
   }
 
   function boot() {
@@ -620,6 +827,7 @@ import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
     initHeaderBubbles();
     initNavToggles();
     initStageControls();
+    initProcessPage(document);
     if (HEADER_DEBUG_ENABLED) {
       applyHeaderDebugOutlines();
       renderHeaderDebugOverlay();

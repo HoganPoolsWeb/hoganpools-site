@@ -96,6 +96,7 @@ function setVideoSource(video, src) {
   state.playAttemptId += 1;
   state.playPromise = null;
   state.autoplayRejected = false;
+  showPoster(video);
   video.load();
   return true;
 }
@@ -112,10 +113,13 @@ function reveal(video) {
   video.closest(".bg")?.classList.add("is-video-ready");
 }
 
+function showPoster(video) {
+  video.closest(".bg")?.classList.remove("is-video-ready");
+}
+
 function waitForReadiness(video) {
   const state = getState(video);
   if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-    reveal(video);
     return Promise.resolve(true);
   }
   if (state.readyPromise) return state.readyPromise;
@@ -134,13 +138,13 @@ function waitForReadiness(video) {
       state.readyTimer = 0;
       events.forEach((eventName) => video.removeEventListener(eventName, onReady));
       failureEvents.forEach((eventName) => video.removeEventListener(eventName, onFailure));
-      if (ready) reveal(video);
       state.readyPromise = null;
       resolve(ready);
     };
     const onReady = () => finish(true);
     const onFailure = (event) => {
       warnOnce(state, `media-${event.type}`, `Background video ${event.type}.`);
+      showPoster(video);
       finish(false);
     };
     const events = ["loadedmetadata", "loadeddata", "canplay"];
@@ -167,6 +171,7 @@ function armWatchdog(video) {
 
     const progressed = (video.currentTime || 0) > startTime + 0.05;
     if (!progressed && video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+      showPoster(video);
       tryNextSource(video, "watchdog");
     }
   }, WATCHDOG_MS);
@@ -196,12 +201,33 @@ function bindElementListeners(video) {
     reveal(video);
   });
 
+  video.addEventListener("timeupdate", () => {
+    if (!video.paused && !video.ended && video.currentTime > 0) {
+      reveal(video);
+    }
+  });
+
+  video.addEventListener("waiting", () => {
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      showPoster(video);
+    }
+  });
+
+  video.addEventListener("emptied", () => {
+    showPoster(video);
+  });
+
+  video.addEventListener("abort", () => {
+    showPoster(video);
+  });
+
   video.addEventListener("error", () => {
+    showPoster(video);
     tryNextSource(video, "error");
   });
 
   video.addEventListener("stalled", () => {
-    tryNextSource(video, "stalled");
+    showPoster(video);
   });
 }
 
@@ -248,7 +274,9 @@ export function startBackgroundVideo(video = document.querySelector(".bg__video"
   const state = getState(video);
   if (!options.force && state.autoplayRejected) return Promise.resolve(false);
   if (!video.paused && !video.ended && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-    reveal(video);
+    if (video.currentTime > 0) {
+      reveal(video);
+    }
     return Promise.resolve(true);
   }
   if (state.playPromise) return state.playPromise;
@@ -262,6 +290,7 @@ export function startBackgroundVideo(video = document.querySelector(".bg__video"
     if (state.playAttemptId === playAttemptId) {
       state.autoplayRejected = true;
     }
+    showPoster(video);
     warnOnce(state, "play-throw", "Background video playback could not start.", error);
     if (state.playAttemptId === playAttemptId) {
       state.playPromise = null;
@@ -270,7 +299,6 @@ export function startBackgroundVideo(video = document.querySelector(".bg__video"
   }
 
   if (!state.playPromise || typeof state.playPromise.then !== "function") {
-    reveal(video);
     state.playPromise = null;
     return Promise.resolve(true);
   }
@@ -278,7 +306,9 @@ export function startBackgroundVideo(video = document.querySelector(".bg__video"
   armWatchdog(video);
   state.playPromise = state.playPromise
     .then(() => {
-      reveal(video);
+      if (!video.paused && !video.ended && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        reveal(video);
+      }
       if (state.playAttemptId === playAttemptId) {
         state.autoplayRejected = false;
       }
@@ -288,6 +318,7 @@ export function startBackgroundVideo(video = document.querySelector(".bg__video"
       if (state.playAttemptId === playAttemptId) {
         state.autoplayRejected = true;
       }
+      showPoster(video);
       warnOnce(state, "autoplay-rejected", "Background video autoplay was rejected.", error);
       return false;
     })

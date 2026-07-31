@@ -3492,15 +3492,24 @@ body.gallery-full .gallery-grid {
 .gallery-project-card__hero:-webkit-full-screen {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
   background: #02070c;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  justify-content: center;
 }
 
 .gallery-project-card__hero:fullscreen img,
 .gallery-project-card__hero:-webkit-full-screen img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center center;
+  align-self: center;
+  justify-self: center;
 }
 
 .gallery-project-card__hero:fullscreen .gallery-project-card__fullscreen,

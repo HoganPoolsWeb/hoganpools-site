@@ -5,6 +5,7 @@ export const ROUTES = {
   gallery: "gallery",
   // design: "design",
   about: "about",
+  faq: "faq",
   financing: "financing",
   careers: "careers",
 };
@@ -15,6 +16,7 @@ const ROUTE_PATHS = {
   gallery: "/gallery/",
   // design: "/design/",
   about: "/about-us/",
+  faq: "/faq/",
   financing: "/financing/",
   careers: "/careers/",
 };
@@ -25,6 +27,7 @@ const PATH_ROUTES = {
   "/gallery/": "gallery",
   // "/design/": "design",
   "/about-us/": "about",
+  "/faq/": "faq",
   "/financing/": "financing",
   "/careers/": "careers",
 };

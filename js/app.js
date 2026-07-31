@@ -1,4 +1,5 @@
 // /js/app.js
+import { initBackgroundVideo, retryBackgroundVideoPlayback, startBackgroundVideo } from "./background-video.js";
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
 import { cleanupProcessPage, initProcessPage } from "./process-page.js";
 import { getRouteFromHref, getRouteFromLocation, loadRoute, routeToPath } from "./router.js";
@@ -7,175 +8,17 @@ const app = document.getElementById("app");
 const siteHeader = document.getElementById("site-header");
 const stage = document.querySelector(".stage");
 const stageCard = document.querySelector(".stage__card");
-const bg = document.querySelector(".bg");
-const bgVideo = document.querySelector(".bg__video");
 const prevButton = document.querySelector(".stage__control--left");
 const nextButton = document.querySelector(".stage__control--right");
-const BG_VIDEO_BASELINE_SRC = "/assets/video/water720p-baseline.mp4";
-const BG_VIDEO_DEFAULT_SRC = "/assets/video/water720p.mp4";
 
 // Restore "design" in this array when the Design page should reappear in SPA arrow navigation.
-const ROUTE_ORDER = ["home", "process", "gallery", "about", "financing", "careers"];
+const ROUTE_ORDER = ["home", "process", "gallery", "about", "faq", "financing", "careers"];
 
 let cleanupHomeTestimonialsMobileRotator = null;
 let galleryLightboxModulePromise = null;
 let galleryProjectCardModulePromise = null;
 let hearthLoaderModulePromise = null;
 // let designToolModulePromise = null;
-let hasStartedBackgroundVideo = false;
-let hasArmedBackgroundVideoRetry = false;
-let backgroundVideoWatchdogTimer = 0;
-
-function revealBackgroundVideoWhenReady(videoEl, reveal) {
-  if (!videoEl || typeof reveal !== "function") return;
-
-  let didReveal = false;
-  const revealOnce = () => {
-    if (didReveal) return;
-    didReveal = true;
-    reveal();
-  };
-
-  ["playing", "canplay", "loadeddata", "timeupdate", "loadedmetadata"].forEach((eventName) => {
-    videoEl.addEventListener(eventName, revealOnce, { once: true });
-  });
-
-  window.setTimeout(() => {
-    if (!didReveal && !videoEl.paused && videoEl.currentTime > 0) {
-      revealOnce();
-    }
-  }, 2000);
-}
-
-function isAndroidChrome() {
-  const ua = navigator.userAgent || "";
-  return /Android/i.test(ua) && /Chrome\//i.test(ua) && !/EdgA\//i.test(ua);
-}
-
-function getBackgroundVideoSourceCandidates() {
-  if (isAndroidChrome()) {
-    return [BG_VIDEO_BASELINE_SRC, BG_VIDEO_DEFAULT_SRC];
-  }
-
-  return [BG_VIDEO_DEFAULT_SRC, BG_VIDEO_BASELINE_SRC];
-}
-
-function setBackgroundVideoSources(videoEl, sources) {
-  if (!videoEl) return;
-
-  const desiredSources = Array.isArray(sources) ? sources : [];
-  const existingSources = Array.from(videoEl.querySelectorAll('source[type="video/mp4"]'));
-  let changed = false;
-
-  desiredSources.forEach((src, index) => {
-    let source = existingSources[index];
-    if (!source) {
-      source = document.createElement("source");
-      source.type = "video/mp4";
-      videoEl.appendChild(source);
-      changed = true;
-    }
-
-    if (source.getAttribute("src") !== src) {
-      source.setAttribute("src", src);
-      changed = true;
-    }
-  });
-
-  existingSources.slice(desiredSources.length).forEach((source) => {
-    source.remove();
-    changed = true;
-  });
-
-  if (changed) {
-    videoEl.load();
-  }
-}
-
-function selectBackgroundVideoSource(videoEl) {
-  if (!videoEl) return;
-
-  const candidates = getBackgroundVideoSourceCandidates();
-  videoEl.dataset.bgSourceIndex = "0";
-  setBackgroundVideoSources(videoEl, [candidates[0]]);
-}
-
-function tryNextBackgroundVideoSource(videoEl) {
-  if (!videoEl) return false;
-
-  const candidates = getBackgroundVideoSourceCandidates();
-  const currentIndex = Number(videoEl.dataset.bgSourceIndex || "0");
-  const nextIndex = currentIndex + 1;
-
-  if (nextIndex >= candidates.length) return false;
-
-  videoEl.dataset.bgSourceIndex = String(nextIndex);
-  setBackgroundVideoSources(videoEl, [candidates[nextIndex]]);
-  return true;
-}
-
-function armBackgroundVideoWatchdog(videoEl, onFailure) {
-  if (!videoEl || typeof onFailure !== "function") return;
-
-  if (backgroundVideoWatchdogTimer) {
-    window.clearTimeout(backgroundVideoWatchdogTimer);
-    backgroundVideoWatchdogTimer = 0;
-  }
-
-  const startTime = videoEl.currentTime || 0;
-
-  backgroundVideoWatchdogTimer = window.setTimeout(() => {
-    backgroundVideoWatchdogTimer = 0;
-    if (document.hidden) return;
-
-    const progressed = (videoEl.currentTime || 0) > startTime + 0.05;
-    const healthyPlayback = !videoEl.paused && videoEl.readyState >= 2 && progressed;
-
-    if (!healthyPlayback) {
-      onFailure();
-    }
-  }, isAndroidChrome() ? 3400 : 2600);
-}
-
-function armBackgroundVideoRetry(videoEl) {
-  if (!videoEl || hasArmedBackgroundVideoRetry) return;
-  hasArmedBackgroundVideoRetry = true;
-
-  const retryPlay = () => {
-    window.removeEventListener("touchstart", retryPlay, true);
-    window.removeEventListener("click", retryPlay, true);
-    hasArmedBackgroundVideoRetry = false;
-
-    try {
-      const retryPromise = videoEl.play();
-      if (retryPromise && typeof retryPromise.catch === "function") {
-        retryPromise.catch(() => {
-          if (!tryNextBackgroundVideoSource(videoEl)) {
-            // Ignore second-play failures and keep poster fallback.
-            return;
-          }
-
-          try {
-            const fallbackPromise = videoEl.play();
-            if (fallbackPromise && typeof fallbackPromise.catch === "function") {
-              fallbackPromise.catch(() => {
-                // Keep poster fallback if alternate source also fails.
-              });
-            }
-          } catch {
-            // Keep poster fallback if alternate source throws.
-          }
-        });
-      }
-    } catch {
-      // Ignore second-play failures and keep poster fallback.
-    }
-  };
-
-  window.addEventListener("touchstart", retryPlay, true);
-  window.addEventListener("click", retryPlay, true);
-}
-
 function ensureMetaByName(name) {
   let tag = document.head.querySelector(`meta[name="${name}"]`);
   if (!tag) {
@@ -459,86 +302,8 @@ function applyTestimonialSizing(root = document) {
 }
 
 function initBackgroundVideoGate() {
-  selectBackgroundVideoSource(bgVideo);
-  const root = document.documentElement;
-  root.classList.add("bg-ready");
+  initBackgroundVideo(document);
   return Promise.resolve();
-}
-
-function startBackgroundVideo() {
-  if (!bgVideo || hasStartedBackgroundVideo) return;
-
-  try {
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-  } catch {
-    // ignore
-  }
-
-  hasStartedBackgroundVideo = true;
-  bgVideo.muted = true;
-  bgVideo.defaultMuted = true;
-  bgVideo.autoplay = true;
-  bgVideo.loop = true;
-  bgVideo.playsInline = true;
-  bgVideo.setAttribute("muted", "");
-  bgVideo.setAttribute("autoplay", "");
-  bgVideo.setAttribute("loop", "");
-  bgVideo.setAttribute("playsinline", "");
-  bgVideo.setAttribute("webkit-playsinline", "");
-  bgVideo.setAttribute("preload", "auto");
-
-  const reveal = () => {
-    if (bg) bg.classList.add("is-video-ready");
-  };
-
-  const handlePlaybackFailure = () => {
-    if (tryNextBackgroundVideoSource(bgVideo)) {
-      tryStartPlayback();
-      return;
-    }
-
-    hasStartedBackgroundVideo = false;
-    armBackgroundVideoRetry(bgVideo);
-  };
-
-  if (bgVideo.dataset.bgRecoveryBound !== "true") {
-    bgVideo.dataset.bgRecoveryBound = "true";
-    ["error", "stalled", "abort", "emptied"].forEach((eventName) => {
-      bgVideo.addEventListener(eventName, () => {
-        handlePlaybackFailure();
-      });
-    });
-  }
-
-  if (bgVideo.readyState >= 3) {
-    reveal();
-  } else {
-    revealBackgroundVideoWhenReady(bgVideo, reveal);
-  }
-
-  function tryStartPlayback() {
-    armBackgroundVideoWatchdog(bgVideo, handlePlaybackFailure);
-
-    try {
-      const p = bgVideo.play();
-      if (p && typeof p.catch === "function") {
-        if (typeof p.then === "function") {
-          p.then(() => {
-            reveal();
-          });
-        }
-        p.catch(() => {
-          handlePlaybackFailure();
-        });
-      }
-    } catch {
-      handlePlaybackFailure();
-    }
-  }
-
-  tryStartPlayback();
 }
 
 function startBackgroundVideoAfterInitialPaint() {
@@ -695,6 +460,7 @@ async function injectPartials() {
             <a href="/our-process/">Our Process</a>
             <a href="/gallery/">Gallery</a>
             <a href="/about-us/">About Us</a>
+            <a href="/faq/">FAQ</a>
             <a href="/financing/">Financing</a>
             <a href="/careers/">Careers</a>
           </nav>
@@ -911,6 +677,7 @@ async function renderRouteIntoCurrent(route) {
   syncHeaderNavState(route);
   updateSeoForRoute(payload?.seo, route);
   initObfuscatedPhoneLinks(document);
+  initBackgroundVideo(document);
   if (route === "gallery") {
     await initializeGalleryProjectCards(app || document);
   }
@@ -1010,6 +777,7 @@ async function slideCardNavigate(route, dir) {
     syncHeaderNavState(route);
     updateSeoForRoute(payload?.seo, route);
     initObfuscatedPhoneLinks(document);
+    initBackgroundVideo(document);
     if (route === "gallery") {
       await initializeGalleryProjectCards(app || document);
     }
@@ -1121,7 +889,7 @@ async function boot() {
 
   setIntroState();
 
-  const wakeVideo = () => startBackgroundVideo();
+  const wakeVideo = () => retryBackgroundVideoPlayback();
 
   ["pointerdown", "touchstart", "keydown", "scroll"].forEach((eventName) => {
     window.addEventListener(eventName, wakeVideo, {

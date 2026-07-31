@@ -1,19 +1,19 @@
+import { initBackgroundVideo } from "./background-video.js";
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
 import { cleanupProcessPage, initProcessPage } from "./process-page.js";
 import { loadRoute } from "./router.js";
 
 (() => {
-  const BG_VIDEO_BASELINE_SRC = "/assets/video/water720p-baseline.mp4";
   const HEADER_DEBUG_ENABLED = /(?:^|\?)headerdebug=1(?:&|$)/i.test(window.location.search);
-  const BG_VIDEO_DEFAULT_SRC = "/assets/video/water720p.mp4";
   // Restore "design" in this array when the Design page should reappear in static-page arrow navigation.
-  const ROUTE_ORDER = ["home", "process", "gallery", "about", "financing", "careers"];
+  const ROUTE_ORDER = ["home", "process", "gallery", "about", "faq", "financing", "careers"];
   const PATH_ROUTES = {
     "/": "home",
     "/our-process/": "process",
     "/gallery/": "gallery",
     // "/design/": "design",
     "/about-us/": "about",
+    "/faq/": "faq",
     "/financing/": "financing",
     "/careers/": "careers",
   };
@@ -23,10 +23,10 @@ import { loadRoute } from "./router.js";
     gallery: "/gallery/",
     // design: "/design/",
     about: "/about-us/",
+    faq: "/faq/",
     financing: "/financing/",
     careers: "/careers/",
   };
-  let hasArmedBackgroundVideoRetry = false;
   let currentRoute = getRouteFromLocation();
   let isStageTransitioning = false;
 
@@ -37,16 +37,27 @@ import { loadRoute } from "./router.js";
   }
 
   function getRouteFromLocation() {
-    return PATH_ROUTES[normalizePath(window.location.pathname)] || "home";
+    return PATH_ROUTES[normalizePath(window.location.pathname)] || null;
+  }
+
+  function getRouteFromHref(href) {
+    try {
+      const url = new URL(href, window.location.origin);
+      if (url.origin !== window.location.origin) return null;
+      return PATH_ROUTES[normalizePath(url.pathname)] || null;
+    } catch {
+      return null;
+    }
   }
 
   function routeToPath(route) {
-    return ROUTE_PATHS[route] || "/";
+    return ROUTE_PATHS[route] || null;
   }
 
   function getNextRoute(direction) {
-    const current = getRouteFromLocation();
+    const current = currentRoute || getRouteFromLocation();
     const index = ROUTE_ORDER.indexOf(current);
+    if (index === -1) return null;
     const nextIndex = (index + direction + ROUTE_ORDER.length) % ROUTE_ORDER.length;
     return ROUTE_ORDER[nextIndex];
   }
@@ -61,89 +72,9 @@ import { loadRoute } from "./router.js";
     return forwardDistance <= backwardDistance ? "forward" : "backward";
   }
 
-  function revealBackgroundVideoWhenReady(videoEl, reveal) {
-    if (!videoEl || typeof reveal !== "function") return;
-
-    let didReveal = false;
-    const revealOnce = () => {
-      if (didReveal) return;
-      didReveal = true;
-      reveal();
-    };
-
-    ["playing", "canplay", "loadeddata", "timeupdate", "loadedmetadata"].forEach((eventName) => {
-      videoEl.addEventListener(eventName, revealOnce, { once: true });
-    });
-
-    window.setTimeout(() => {
-      if (!didReveal && !videoEl.paused && videoEl.currentTime > 0) {
-        revealOnce();
-      }
-    }, 2000);
-  }
-
-  function selectBackgroundVideoSource(videoEl) {
-    if (!videoEl) return;
-
-    const desiredSources = [BG_VIDEO_BASELINE_SRC, BG_VIDEO_DEFAULT_SRC];
-    const existingSources = Array.from(videoEl.querySelectorAll('source[type="video/mp4"]'));
-    let changed = false;
-
-    desiredSources.forEach((src, index) => {
-      let source = existingSources[index];
-      if (!source) {
-        source = document.createElement("source");
-        source.type = "video/mp4";
-        videoEl.appendChild(source);
-        changed = true;
-      }
-
-      if (source.getAttribute("src") !== src) {
-        source.setAttribute("src", src);
-        changed = true;
-      }
-    });
-
-    existingSources.slice(desiredSources.length).forEach((source) => {
-      source.remove();
-      changed = true;
-    });
-
-    if (changed) {
-      videoEl.load();
-    }
-  }
-
-  function armBackgroundVideoRetry(videoEl) {
-    if (!videoEl || hasArmedBackgroundVideoRetry) return;
-    hasArmedBackgroundVideoRetry = true;
-
-    const retryPlay = () => {
-      window.removeEventListener("touchstart", retryPlay, true);
-      window.removeEventListener("click", retryPlay, true);
-      hasArmedBackgroundVideoRetry = false;
-
-      try {
-        const retryPromise = videoEl.play();
-        if (retryPromise && typeof retryPromise.catch === "function") {
-          retryPromise.catch(() => {
-            // Ignore second-play failures and keep poster fallback.
-          });
-        }
-      } catch {
-        // Ignore second-play failures and keep poster fallback.
-      }
-    };
-
-    window.addEventListener("touchstart", retryPlay, true);
-    window.addEventListener("click", retryPlay, true);
-  }
-
   function initStageVisibility() {
     const root = document.documentElement;
     const stage = document.querySelector(".stage");
-    const bg = document.querySelector(".bg");
-    const bgVideo = document.querySelector(".bg__video");
 
     // Match SPA boot behavior so static pages don't keep stage content hidden.
     root.classList.add("bg-ready");
@@ -152,42 +83,7 @@ import { loadRoute } from "./router.js";
       stage.classList.remove("is-intro");
     }
 
-    if (!bg || !bgVideo) return;
-
-    selectBackgroundVideoSource(bgVideo);
-    bgVideo.muted = true;
-    bgVideo.defaultMuted = true;
-    bgVideo.autoplay = true;
-    bgVideo.loop = true;
-    bgVideo.playsInline = true;
-    bgVideo.setAttribute("muted", "");
-    bgVideo.setAttribute("autoplay", "");
-    bgVideo.setAttribute("loop", "");
-    bgVideo.setAttribute("playsinline", "");
-    bgVideo.setAttribute("webkit-playsinline", "");
-
-    const revealVideo = () => bg.classList.add("is-video-ready");
-    if (bgVideo.readyState >= 3) {
-      revealVideo();
-    } else {
-      revealBackgroundVideoWhenReady(bgVideo, revealVideo);
-    }
-
-    try {
-      const p = bgVideo.play();
-      if (p && typeof p.catch === "function") {
-        if (typeof p.then === "function") {
-          p.then(() => {
-            revealVideo();
-          });
-        }
-        p.catch(() => {
-          armBackgroundVideoRetry(bgVideo);
-        });
-      }
-    } catch {
-      armBackgroundVideoRetry(bgVideo);
-    }
+    initBackgroundVideo(document, { attemptPlayback: true });
   }
 
   function initHeaderBubbles() {
@@ -277,6 +173,7 @@ import { loadRoute } from "./router.js";
             <a href="/our-process/">Our Process</a>
             <a href="/gallery/">Gallery</a>
             <a href="/about-us/">About Us</a>
+            <a href="/faq/">FAQ</a>
             <a href="/financing/">Financing</a>
             <a href="/careers/">Careers</a>
           </nav>
@@ -618,7 +515,7 @@ import { loadRoute } from "./router.js";
 
     let prevButton = stage.querySelector(".stage__control--left");
     let nextButton = stage.querySelector(".stage__control--right");
-    const shouldCreateControls = Boolean(document.querySelector(".process-page"));
+    const shouldCreateControls = ROUTE_ORDER.includes(currentRoute);
 
     if (!prevButton && shouldCreateControls) {
       prevButton = document.createElement("button");
@@ -743,6 +640,7 @@ import { loadRoute } from "./router.js";
       }
       syncHeaderNavState(route);
       initObfuscatedPhoneLinks(document);
+      initBackgroundVideo(document);
       if (route === "process") {
         initProcessPage(stageContent || document);
       }
@@ -803,8 +701,29 @@ import { loadRoute } from "./router.js";
       slideNavigate(nextRoute, direction > 0 ? "right" : "left");
     };
 
+    const onRouteLinkClick = (event) => {
+      const link = event.target?.closest?.("a");
+      if (!link) return;
+      if (link.hasAttribute("download")) return;
+      if (link.target && link.target.toLowerCase() === "_blank") return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+
+      const href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) return;
+
+      const route = getRouteFromHref(link.href);
+      if (!route) return;
+
+      event.preventDefault();
+      if (route === currentRoute) return;
+
+      const direction = getDirection(currentRoute, route);
+      slideNavigate(route, direction === "forward" ? "right" : "left");
+    };
+
     prevButton?.addEventListener("click", () => onStageControl(-1));
     nextButton?.addEventListener("click", () => onStageControl(1));
+    document.addEventListener("click", onRouteLinkClick);
     document.addEventListener("keydown", (event) => {
       if (event.target?.closest?.(".process-row__slideshow")) return;
       if (event.key === "ArrowLeft") onStageControl(-1);
@@ -813,7 +732,7 @@ import { loadRoute } from "./router.js";
 
     window.addEventListener("popstate", () => {
       const nextRoute = getRouteFromLocation();
-      if (nextRoute === currentRoute) return;
+      if (!nextRoute || nextRoute === currentRoute) return;
       const direction = getDirection(currentRoute, nextRoute);
       slideNavigate(nextRoute, direction === "forward" ? "right" : "left", {
         updateHistory: false,

@@ -35,6 +35,37 @@
     );
     let timerId = null;
     let transitionToken = 0;
+
+    const waitForHeroOpacityTransition = (token) => new Promise((resolve) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        heroImg.removeEventListener('transitionend', onEnd);
+        window.clearTimeout(fallbackTimer);
+        resolve();
+      };
+      const onEnd = (event) => {
+        if (event.propertyName !== 'opacity') return;
+        finish();
+      };
+
+      heroImg.addEventListener('transitionend', onEnd);
+      const fallbackTimer = window.setTimeout(finish, FADE_MS + 120);
+
+      if (token !== transitionToken) {
+        finish();
+      }
+    });
+
+    const applyHeroSlide = (slide) => {
+      if (slide.sizes) heroImg.setAttribute('sizes', slide.sizes);
+      if (slide.srcset) heroImg.setAttribute('srcset', slide.srcset);
+      heroImg.setAttribute('src', slide.src);
+      heroImg.setAttribute('alt', slide.alt);
+      setHeroOrientation(slide.orientation);
+    };
+
     const setHeroOrientation = (orientation) => {
       heroImg.classList.toggle('is-portrait', orientation === 'portrait');
       heroImg.classList.toggle('is-landscape', orientation === 'landscape');
@@ -63,11 +94,7 @@
       }
 
       if (immediate) {
-        heroImg.setAttribute('src', slide.src);
-        if (slide.srcset) heroImg.setAttribute('srcset', slide.srcset);
-        if (slide.sizes) heroImg.setAttribute('sizes', slide.sizes);
-        heroImg.setAttribute('alt', slide.alt);
-        setHeroOrientation(slide.orientation);
+        applyHeroSlide(slide);
         heroImg.style.opacity = '1';
         return;
       }
@@ -75,20 +102,16 @@
       const token = ++transitionToken;
       heroImg.style.opacity = '0';
 
-      window.setTimeout(() => {
+      waitForHeroOpacityTransition(token).then(() => {
         if (token !== transitionToken) return;
-        heroImg.setAttribute('src', slide.src);
-        if (slide.srcset) heroImg.setAttribute('srcset', slide.srcset);
-        if (slide.sizes) heroImg.setAttribute('sizes', slide.sizes);
-        heroImg.setAttribute('alt', slide.alt);
-        setHeroOrientation(slide.orientation);
+        applyHeroSlide(slide);
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             if (token !== transitionToken) return;
             heroImg.style.opacity = '1';
           });
         });
-      }, FADE_MS / 2);
+      });
     };
 
     const stopAutoAdvance = () => {

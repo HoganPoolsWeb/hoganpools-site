@@ -3187,6 +3187,13 @@ html {
   line-height: 1.6;
 }
 
+@media (max-width: 520px) {
+  .gallery-page__title {
+    font-size: clamp(1.45rem, 6.6vw, 1.9rem);
+    white-space: nowrap;
+  }
+}
+
 .gallery-full .gallery-item {
   position: relative;
   display: block;

@@ -90,18 +90,7 @@
       }
     };
 
-    const onFullscreenChange = () => {
-      const isFullscreen = getFullscreenElement() === hero;
-      fullscreenButton.classList.toggle('is-fullscreen', isFullscreen);
-      fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen image' : 'View image fullscreen');
-      if (!isFullscreen) {
-        unlockOrientation();
-      }
-    };
-
     fullscreenButton.addEventListener('click', onFullscreenClick);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
     let currentIndex = Math.max(
       0,
@@ -132,9 +121,20 @@
       }
     });
 
+    const isHeroFullscreen = () => getFullscreenElement() === hero;
+
     const applyHeroSlide = (slide) => {
-      if (slide.sizes) heroImg.setAttribute('sizes', slide.sizes);
-      if (slide.srcset) heroImg.setAttribute('srcset', slide.srcset);
+      if (isHeroFullscreen()) {
+        heroImg.setAttribute('sizes', '100vw');
+        heroImg.setAttribute('srcset', `${slide.src} 1440w`);
+      } else {
+        if (slide.sizes) heroImg.setAttribute('sizes', slide.sizes);
+        if (slide.srcset) {
+          heroImg.setAttribute('srcset', slide.srcset);
+        } else {
+          heroImg.removeAttribute('srcset');
+        }
+      }
       heroImg.setAttribute('src', slide.src);
       heroImg.setAttribute('alt', slide.alt);
       setHeroOrientation(slide.orientation);
@@ -162,8 +162,8 @@
       setActiveThumb();
 
       if ((heroImg.getAttribute('src') || heroImg.src || '') === slide.src) {
+        applyHeroSlide(slide);
         heroImg.setAttribute('alt', slide.alt);
-        setHeroOrientation(slide.orientation);
         return;
       }
 
@@ -187,6 +187,19 @@
         });
       });
     };
+
+    const onFullscreenChange = () => {
+      const isFullscreen = isHeroFullscreen();
+      fullscreenButton.classList.toggle('is-fullscreen', isFullscreen);
+      fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen image' : 'View image fullscreen');
+      applyHeroSlide(slides[currentIndex]);
+      if (!isFullscreen) {
+        unlockOrientation();
+      }
+    };
+
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
     const stopAutoAdvance = () => {
       if (timerId) {

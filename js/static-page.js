@@ -629,11 +629,23 @@ import { loadRoute } from "./router.js";
       stage.className = Array.from(stageClassNames).join(" ");
     };
 
+    const resetStageScrollPosition = () => {
+      if (stageCard) {
+        stageCard.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+        stageCard.scrollTop = 0;
+        stageCard.scrollLeft = 0;
+        return;
+      }
+
+      window.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+    };
+
     const renderRoute = async (route) => {
       cleanupProcessPage();
       syncRouteBodyClasses(route);
       const payload = await loadRoute(route, stageContent);
       if (!payload) return false;
+      resetStageScrollPosition();
       syncStageShell(route, payload.shell);
       if (payload.shell?.contentClassName) {
         stageContent.className = payload.shell.contentClassName;

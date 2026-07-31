@@ -668,11 +668,23 @@ function getDirection(fromRoute, toRoute) {
 let currentRoute = getRouteFromLocation();
 let isTransitioning = false;
 
+function resetStageScrollPosition() {
+  if (stageCard) {
+    stageCard.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+    stageCard.scrollTop = 0;
+    stageCard.scrollLeft = 0;
+    return;
+  }
+
+  window.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+}
+
 async function renderRouteIntoCurrent(route) {
   cleanupProcessPage();
   syncRouteBodyClasses(route);
   await ensureRouteAssets(route);
   const payload = await loadRoute(route, app);
+  resetStageScrollPosition();
   syncStageShell(route, payload?.shell);
   syncHeaderNavState(route);
   updateSeoForRoute(payload?.seo, route);
@@ -773,6 +785,7 @@ async function slideCardNavigate(route, dir) {
     await ensureRouteAssets(route);
     cleanupProcessPage();
     const payload = await loadRoute(route, app);
+    resetStageScrollPosition();
     syncStageShell(route, payload?.shell);
     syncHeaderNavState(route);
     updateSeoForRoute(payload?.seo, route);

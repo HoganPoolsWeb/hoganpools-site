@@ -2655,10 +2655,15 @@ body.is-gunite .stage__content {
 /* Footer (rendered via /partials/footer.html) */
 .site-footer {
   margin-top: 48px;
-  padding: 34px var(--pad);
+  padding: 34px clamp(8px, 3vw, var(--pad));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
 }
 
+.footer__grid,
 .footer__content {
   display: flex;
   flex-direction: column;
@@ -2671,16 +2676,16 @@ body.is-gunite .stage__content {
 }
 
 .footer__copyright {
-  font-size: 0.82rem;
+  max-width: 100%;
+  font-size: clamp(0.62rem, 2.55vw, 0.82rem);
+  line-height: 1.35;
   color: rgba(255, 255, 255, 0.55);
-  white-space: normal;
-}
-
-.footer__copyright time {
+  text-align: center;
   white-space: nowrap;
 }
 
-body.is-home .footer__copyright {
+.footer__privacy,
+.footer__copyright time {
   white-space: nowrap;
 }
 
@@ -2692,6 +2697,11 @@ body.is-home .footer__copyright {
   gap: 1.25rem;
   max-width: 100%;
   white-space: normal;
+}
+
+.footer__tagline {
+  color: rgba(255, 255, 255, 0.72);
+  text-align: center;
 }
 
 .footer__label,
@@ -2709,7 +2719,7 @@ body.is-home .footer__copyright {
 @media (max-width: 700px) {
   .footer__grid {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 20px;
   }
 
@@ -2719,6 +2729,20 @@ body.is-home .footer__copyright {
     justify-content: center;
     gap: 0.5rem;
     white-space: normal;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-footer {
+    padding-inline: 6px;
+  }
+
+  .footer__copyright {
+    font-size: clamp(0.56rem, 2.7vw, 0.68rem);
+  }
+
+  .footer__contact {
+    font-size: 0.76rem;
   }
 }
 .time {

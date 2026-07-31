@@ -28,7 +28,7 @@
     }
 
     root.dataset.galleryCardInitialized = 'true';
-    heroImg.style.transition = `opacity ${FADE_MS}ms ease`;
+    heroImg.classList.add('gallery-project-card__hero-image', 'is-visible');
 
     const requestFullscreen = (element) => {
       const request = element.requestFullscreen || element.webkitRequestFullscreen;
@@ -71,6 +71,14 @@
       <span class="sr-only">View image fullscreen</span>
     `;
     hero.append(fullscreenButton);
+    const standbyHeroImg = heroImg.cloneNode(false);
+    standbyHeroImg.className = 'gallery-project-card__hero-image is-standby';
+    standbyHeroImg.setAttribute('aria-hidden', 'true');
+    standbyHeroImg.alt = '';
+    hero.insertBefore(standbyHeroImg, fullscreenButton);
+
+    let activeHeroImg = heroImg;
+    let inactiveHeroImg = standbyHeroImg;
 
     const onFullscreenClick = async (event) => {
       event.preventDefault();
@@ -99,22 +107,24 @@
     let timerId = null;
     let transitionToken = 0;
 
-    const waitForHeroOpacityTransition = (token) => new Promise((resolve) => {
+    const waitForImageReady = (image, token) => new Promise((resolve) => {
       let finished = false;
       const finish = () => {
         if (finished) return;
         finished = true;
-        heroImg.removeEventListener('transitionend', onEnd);
+        image.removeEventListener('load', finish);
+        image.removeEventListener('error', finish);
         window.clearTimeout(fallbackTimer);
         resolve();
       };
-      const onEnd = (event) => {
-        if (event.propertyName !== 'opacity') return;
-        finish();
-      };
 
-      heroImg.addEventListener('transitionend', onEnd);
-      const fallbackTimer = window.setTimeout(finish, FADE_MS + 120);
+      image.addEventListener('load', finish, { once: true });
+      image.addEventListener('error', finish, { once: true });
+      const fallbackTimer = window.setTimeout(finish, 1400);
+
+      if (image.complete && image.naturalWidth > 0) {
+        finish();
+      }
 
       if (token !== transitionToken) {
         finish();
@@ -123,27 +133,31 @@
 
     const isHeroFullscreen = () => getFullscreenElement() === hero;
 
-    const applyHeroSlide = (slide) => {
-      if (isHeroFullscreen()) {
-        heroImg.setAttribute('sizes', '100vw');
-        heroImg.setAttribute('srcset', `${slide.src} 1440w`);
-      } else {
-        if (slide.sizes) heroImg.setAttribute('sizes', slide.sizes);
-        if (slide.srcset) {
-          heroImg.setAttribute('srcset', slide.srcset);
-        } else {
-          heroImg.removeAttribute('srcset');
-        }
-      }
-      heroImg.setAttribute('src', slide.src);
-      heroImg.setAttribute('alt', slide.alt);
-      setHeroOrientation(slide.orientation);
+    const setHeroOrientation = (image, orientation) => {
+      image.classList.toggle('is-portrait', orientation === 'portrait');
+      image.classList.toggle('is-landscape', orientation === 'landscape');
+      image.classList.toggle('is-square', orientation === 'square');
     };
 
-    const setHeroOrientation = (orientation) => {
-      heroImg.classList.toggle('is-portrait', orientation === 'portrait');
-      heroImg.classList.toggle('is-landscape', orientation === 'landscape');
-      heroImg.classList.toggle('is-square', orientation === 'square');
+    const applyImageSlide = (image, slide) => {
+      if (isHeroFullscreen()) {
+        image.setAttribute('sizes', '100vw');
+        image.setAttribute('srcset', `${slide.src} 1440w`);
+      } else {
+        if (slide.sizes) image.setAttribute('sizes', slide.sizes);
+        if (slide.srcset) {
+          image.setAttribute('srcset', slide.srcset);
+        } else {
+          image.removeAttribute('srcset');
+        }
+      }
+      image.setAttribute('src', slide.src);
+      setHeroOrientation(image, slide.orientation);
+    };
+
+    const applyHeroSlide = (slide, { target = activeHeroImg } = {}) => {
+      applyImageSlide(target, slide);
+      target.setAttribute('alt', slide.alt);
     };
 
     const setActiveThumb = () => {
@@ -161,28 +175,38 @@
       currentIndex = index;
       setActiveThumb();
 
-      if ((heroImg.getAttribute('src') || heroImg.src || '') === slide.src) {
+      if ((activeHeroImg.getAttribute('src') || activeHeroImg.src || '') === slide.src) {
         applyHeroSlide(slide);
-        heroImg.setAttribute('alt', slide.alt);
         return;
       }
 
       if (immediate) {
         applyHeroSlide(slide);
-        heroImg.style.opacity = '1';
+        activeHeroImg.classList.add('is-visible');
+        activeHeroImg.classList.remove('is-standby');
+        inactiveHeroImg.classList.add('is-standby');
+        inactiveHeroImg.classList.remove('is-visible');
         return;
       }
 
       const token = ++transitionToken;
-      heroImg.style.opacity = '0';
+      inactiveHeroImg.classList.add('is-standby');
+      inactiveHeroImg.classList.remove('is-visible');
+      applyHeroSlide(slide, { target: inactiveHeroImg });
+      inactiveHeroImg.alt = '';
 
-      waitForHeroOpacityTransition(token).then(() => {
+      waitForImageReady(inactiveHeroImg, token).then(() => {
         if (token !== transitionToken) return;
-        applyHeroSlide(slide);
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             if (token !== transitionToken) return;
-            heroImg.style.opacity = '1';
+            inactiveHeroImg.classList.add('is-visible');
+            inactiveHeroImg.classList.remove('is-standby');
+            activeHeroImg.classList.add('is-standby');
+            activeHeroImg.classList.remove('is-visible');
+            inactiveHeroImg.alt = slide.alt;
+            activeHeroImg.alt = '';
+            [activeHeroImg, inactiveHeroImg] = [inactiveHeroImg, activeHeroImg];
           });
         });
       });
@@ -261,6 +285,7 @@
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
       fullscreenButton.remove();
+      standbyHeroImg.remove();
       thumbHandlers.forEach(({ thumb, onClick, onKeyDown }) => {
         thumb.removeEventListener('click', onClick);
         thumb.removeEventListener('keydown', onKeyDown);

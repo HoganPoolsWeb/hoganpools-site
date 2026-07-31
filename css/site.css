@@ -3354,6 +3354,7 @@ body.gallery-full .gallery-grid {
   display: grid;
   place-items: center;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .gallery-project-card__hero img,
@@ -3372,6 +3373,23 @@ body.gallery-full .gallery-grid {
   height: 100%;
   /* max-height: clamp(280px, 58vh, 680px); */
   object-fit: contain;
+}
+
+.gallery-project-card__hero-image {
+  grid-area: 1 / 1;
+  transition: opacity 620ms ease;
+  will-change: opacity;
+}
+
+.gallery-project-card__hero-image.is-visible {
+  opacity: 1;
+  z-index: 2;
+}
+
+.gallery-project-card__hero-image.is-standby {
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .gallery-project-card__fullscreen {
@@ -3606,8 +3624,6 @@ body.lightbox-open {
     max-height: none;
     object-fit: contain;
     display: block;
-    transition: opacity 360ms ease;
-    will-change: opacity;
   }
 
   .gallery-project-card__fullscreen {

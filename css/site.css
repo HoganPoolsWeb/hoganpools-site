@@ -65,6 +65,8 @@ html.bg-ready .stage__card {
   --stage-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --z-header: 10000;
   --z-modal: 9000;
+  --z-modal-control: 9001;
+  --gallery-modal-control-space: 66px;
 }
 
 .bg {
@@ -3311,26 +3313,46 @@ body.gallery-full .gallery-grid {
 
 .gallery-project-modal {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(1180px, 96vw);
   max-height: 90vh;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(8, 24, 40, 0.92);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
-  overflow: auto;
+  overflow: hidden;
   color: #fff;
   backdrop-filter: blur(10px);
 }
 
+.gallery-project-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: var(--gallery-modal-control-space);
+  background: linear-gradient(
+    180deg,
+    rgba(8, 24, 40, 0.98) 0%,
+    rgba(8, 24, 40, 0.9) 72%,
+    rgba(8, 24, 40, 0) 100%
+  );
+  pointer-events: none;
+}
+
 .gallery-project-modal__content {
-  min-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .gallery-project-modal__close {
   position: absolute;
   top: 14px;
   right: 14px;
-  z-index: 3;
+  z-index: var(--z-modal-control);
   width: 38px;
   height: 38px;
   border-radius: 50%;
@@ -3599,13 +3621,17 @@ body.lightbox-open {
   .gallery-project-overlay {
     padding: calc(var(--header-height, 78px) + 8px) 8px calc(72px + env(safe-area-inset-bottom, 0px));
     align-items: flex-start;
-    overflow: auto;
+    overflow: hidden;
   }
 
   .gallery-project-modal {
     width: 100%;
     max-height: calc(100svh - 16px);
-    overscroll-behavior: contain;
+  }
+
+  .gallery-project-modal__close {
+    top: 14px;
+    right: calc(14px + env(safe-area-inset-right, 0px));
   }
 
   .gallery-project-card {

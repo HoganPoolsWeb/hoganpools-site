@@ -1,18 +1,19 @@
 const BG_VIDEO_BASELINE_SRC = "/assets/video/water720p-baseline.mp4";
 const BG_VIDEO_DEFAULT_SRC = "/assets/video/water720p.mp4";
+const BG_VIDEO_QUERY = "(min-width: 920px)";
 const READY_TIMEOUT_MS = 3000;
 const WATCHDOG_MS = 3000;
 
 const videoStates = new WeakMap();
 let lifecycleListenersBound = false;
-
-function isAndroidChrome() {
-  const ua = navigator.userAgent || "";
-  return /Android/i.test(ua) && /Chrome\//i.test(ua) && !/EdgA\//i.test(ua);
-}
+let responsiveModeListenerBound = false;
 
 function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+}
+
+function shouldUseBackgroundVideo() {
+  return window.matchMedia?.(BG_VIDEO_QUERY)?.matches ?? true;
 }
 
 function normalizeUrl(src) {
@@ -24,10 +25,6 @@ function normalizeUrl(src) {
 }
 
 function getSourceCandidates() {
-  if (isAndroidChrome()) {
-    return [BG_VIDEO_BASELINE_SRC, BG_VIDEO_DEFAULT_SRC];
-  }
-
   return [BG_VIDEO_DEFAULT_SRC, BG_VIDEO_BASELINE_SRC];
 }
 
@@ -72,6 +69,12 @@ function ensureAttributes(video) {
   video.setAttribute("webkit-playsinline", "");
 }
 
+function useStaticBackgroundOnly(root = document) {
+  const bg = root.querySelector?.(".bg") || document.querySelector(".bg");
+  bg?.classList.remove("is-video-ready");
+  document.documentElement.classList.add("bg-ready");
+}
+
 function setVideoSource(video, src) {
   const state = getState(video);
   const desired = normalizeUrl(src);
@@ -84,12 +87,14 @@ function setVideoSource(video, src) {
   if (!source) {
     source = document.createElement("source");
     source.type = "video/mp4";
+    source.media = BG_VIDEO_QUERY;
     video.appendChild(source);
   }
 
   if (normalizeUrl(source.getAttribute("src") || "") === desired) return false;
 
   source.setAttribute("src", src);
+  source.setAttribute("media", BG_VIDEO_QUERY);
   Array.from(video.querySelectorAll('source[type="video/mp4"]'))
     .slice(1)
     .forEach((extraSource) => extraSource.remove());
@@ -245,7 +250,50 @@ function bindGlobalLifecycle() {
   });
 }
 
+function bindResponsiveModeListener() {
+  if (responsiveModeListenerBound) return;
+  responsiveModeListenerBound = true;
+
+  const query = window.matchMedia?.(BG_VIDEO_QUERY);
+  if (!query) return;
+
+  const onModeChange = (event) => {
+    if (event.matches) {
+      initBackgroundVideo(document, { attemptPlayback: true });
+      return;
+    }
+
+    const video = document.querySelector(".bg__video");
+    if (video) {
+      const state = getState(video);
+      state.autoplayRejected = false;
+      if (state.watchdogTimer) {
+        window.clearTimeout(state.watchdogTimer);
+        state.watchdogTimer = 0;
+      }
+      try {
+        video.pause();
+      } catch {
+        // Ignore pause failures while switching to the static background.
+      }
+    }
+    useStaticBackgroundOnly(document);
+  };
+
+  if (typeof query.addEventListener === "function") {
+    query.addEventListener("change", onModeChange);
+  } else if (typeof query.addListener === "function") {
+    query.addListener(onModeChange);
+  }
+}
+
 export function initBackgroundVideo(root = document, options = {}) {
+  bindResponsiveModeListener();
+  if (!shouldUseBackgroundVideo()) {
+    useStaticBackgroundOnly(root);
+    return null;
+  }
+
   const video = root.matches?.(".bg__video")
     ? root
     : root.querySelector?.(".bg__video") || document.querySelector(".bg__video");
@@ -266,7 +314,13 @@ export function initBackgroundVideo(root = document, options = {}) {
   return video;
 }
 
-export function startBackgroundVideo(video = document.querySelector(".bg__video"), options = {}) {
+export function startBackgroundVideo(video = null, options = {}) {
+  if (!shouldUseBackgroundVideo()) {
+    useStaticBackgroundOnly(document);
+    return Promise.resolve(false);
+  }
+
+  video = video || document.querySelector(".bg__video");
   if (!video || !video.isConnected || prefersReducedMotion()) return Promise.resolve(false);
 
   initBackgroundVideo(video);
@@ -332,6 +386,11 @@ export function startBackgroundVideo(video = document.querySelector(".bg__video"
 }
 
 export function retryBackgroundVideoPlayback() {
+  if (!shouldUseBackgroundVideo()) {
+    useStaticBackgroundOnly(document);
+    return;
+  }
+
   const video = document.querySelector(".bg__video");
   if (!video) return;
 

@@ -110,6 +110,12 @@ html.bg-ready .stage__card {
   opacity: 1;
 }
 
+@media (max-width: 919px) {
+  .bg__video {
+    display: none;
+  }
+}
+
 /* Water wash transition overlay */
 .transition-overlay {
   position: absolute;

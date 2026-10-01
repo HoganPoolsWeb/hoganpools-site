@@ -144,7 +144,7 @@
         image.setAttribute('sizes', '100vw');
         image.setAttribute('srcset', `${slide.src} 1440w`);
       } else {
-        if (slide.sizes) image.setAttribute('sizes', slide.sizes);
+        if (slide.sizes) image.setAttribute('sizes', `(min-width: 1400px) 1400px, ${slide.sizes}`);
         if (slide.srcset) {
           image.setAttribute('srcset', slide.srcset);
         } else {

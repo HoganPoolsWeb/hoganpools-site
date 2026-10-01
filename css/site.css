@@ -3326,6 +3326,12 @@ body.gallery-full .gallery-grid {
   backdrop-filter: blur(10px);
 }
 
+@media (min-width: 1400px) {
+  .gallery-project-modal {
+    width: min(1400px, 96vw);
+  }
+}
+
 .gallery-project-modal::before {
   content: "";
   position: absolute;

@@ -4109,7 +4109,8 @@ body.lightbox-open {
 
 /* Button */
 
-.faq-cta .button {
+.faq-cta .button,
+.service-hero__actions .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4124,7 +4125,8 @@ body.lightbox-open {
     opacity 0.2s ease;
 }
 
-.faq-cta .button:hover {
+.faq-cta .button:hover,
+.service-hero__actions .button:hover {
   transform: translateY(-2px);
   opacity: 0.9;
 }
@@ -4158,4 +4160,293 @@ body.lightbox-open {
   .faq-highlight {
     padding: 1.25rem;
   }
+}
+
+/* ==========================================================
+   SERVICE PAGE (e.g. /pool-replastering/)
+   ========================================================== */
+
+.service-page .page-hero p {
+  margin-top: 0;
+  font-size: 1.15rem;
+  line-height: 1.75;
+}
+
+.service-section {
+  margin-bottom: 2.5rem;
+  padding: 2rem;
+  border-radius: 16px;
+  background: rgba(3, 12, 22, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.service-section h2 {
+  margin-top: 0;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.service-section h3 {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
+.service-section p,
+.service-list li {
+  line-height: 1.75;
+}
+
+.service-section p {
+  margin: 0 0 1rem;
+}
+
+.service-section p:last-child {
+  margin-bottom: 0;
+}
+
+.service-list {
+  margin: 0 0 1.25rem;
+  padding-left: 1.4rem;
+}
+
+.service-list li {
+  margin-bottom: 0.75rem;
+}
+
+.service-list li:last-child {
+  margin-bottom: 0;
+}
+
+.service-steps {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  counter-reset: service-step;
+}
+
+.service-steps li {
+  position: relative;
+  counter-increment: service-step;
+  margin-bottom: 1rem;
+  padding: 1.25rem 1.5rem 1.25rem 4.25rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.service-steps li::before {
+  content: counter(service-step);
+  position: absolute;
+  left: 1.25rem;
+  top: 1.2rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
+
+.service-steps li:last-child {
+  margin-bottom: 0;
+}
+
+.service-steps h3 {
+  margin: 0 0 0.5rem;
+}
+
+.service-steps p {
+  margin: 0;
+}
+
+.service-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (min-width: 1024px) {
+  .service-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.service-cards .faq-item {
+  margin-bottom: 0;
+}
+
+.service-section .faq-item h3 {
+  margin: 0 0 0.75rem;
+}
+
+.service-section .faq-item p {
+  margin: 0;
+}
+
+.service-note {
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+
+.service-cta__alt {
+  margin: 1.25rem auto 0;
+  font-size: 0.95rem;
+}
+
+.faq-cta h2 {
+  margin-top: 0;
+}
+
+/* Inline text links inside body copy */
+.service-section p a,
+.service-cta__alt a,
+.process-outro__copy a {
+  color: #d3ecff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.service-section p a:hover,
+.service-cta__alt a:hover,
+.process-outro__copy a:hover {
+  color: #fff;
+}
+
+.service-section p a:focus-visible,
+.service-cta__alt a:focus-visible,
+.process-outro__copy a:focus-visible,
+.faq-cta .button:focus-visible,
+.service-hero__actions a:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .service-section {
+    padding: 1.25rem;
+  }
+
+  .service-steps li {
+    padding: 1rem 1rem 1rem 3.5rem;
+  }
+
+  .service-steps li::before {
+    left: 0.9rem;
+    top: 0.95rem;
+  }
+}
+
+.service-card--featured {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.service-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.service-section .service-card h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.service-card .service-badge {
+  margin-left: 0;
+}
+
+.service-card h4 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.service-card ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.6;
+}
+
+.service-card li + li {
+  margin-top: 0.3rem;
+}
+
+.service-page .page-hero .service-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1.5rem;
+  font-size: 1rem;
+}
+
+.service-hero__link {
+  color: #d3ecff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.service-hero__link:hover {
+  color: #fff;
+}
+
+/* Optional images; markup is in place as commented slots on the page */
+.service-figure {
+  margin: 0 0 1rem;
+}
+
+.service-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.service-card .service-figure img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.service-figure--wide,
+.service-figure--medium,
+.service-figure--portrait {
+  margin: 1.5rem auto;
+}
+
+.service-figure--wide {
+  max-width: 1000px;
+}
+
+.service-figure--medium {
+  max-width: 720px;
+}
+
+.service-figure--portrait {
+  max-width: 400px;
+}
+
+.service-figure__note {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  opacity: 0.75;
 }

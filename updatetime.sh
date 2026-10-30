@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OLD_DATE="Last updated July 15, 2026"
+OLD_DATE="Last updated October 30, 2026"
 NEW_DATE="Last updated $(date '+%B %-d, %Y')"
 
 git grep -lzF "$OLD_DATE" |

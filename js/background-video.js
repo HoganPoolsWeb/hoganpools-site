@@ -1,6 +1,6 @@
 const BG_VIDEO_BASELINE_SRC = "/assets/video/water720p-baseline.mp4";
 const BG_VIDEO_DEFAULT_SRC = "/assets/video/water720p.mp4";
-const BG_VIDEO_QUERY = "(min-width: 920px)";
+const BG_VIDEO_QUERY = "(prefers-reduced-motion: no-preference)";
 const READY_TIMEOUT_MS = 3000;
 const WATCHDOG_MS = 3000;
 
@@ -12,7 +12,12 @@ function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 }
 
+function prefersSavedData() {
+  return navigator.connection?.saveData === true;
+}
+
 function shouldUseBackgroundVideo() {
+  if (prefersSavedData()) return false;
   return window.matchMedia?.(BG_VIDEO_QUERY)?.matches ?? true;
 }
 
@@ -62,6 +67,7 @@ function ensureAttributes(video) {
   video.autoplay = true;
   video.loop = true;
   video.playsInline = true;
+  video.preload = "metadata";
   video.setAttribute("muted", "");
   video.setAttribute("autoplay", "");
   video.setAttribute("loop", "");
@@ -73,6 +79,26 @@ function useStaticBackgroundOnly(root = document) {
   const bg = root.querySelector?.(".bg") || document.querySelector(".bg");
   bg?.classList.remove("is-video-ready");
   document.documentElement.classList.add("bg-ready");
+
+  const video = bg?.querySelector(".bg__video");
+  if (!video) return;
+
+  // Stop the markup's autoplay from starting playback later; ensureAttributes restores it.
+  video.autoplay = false;
+  video.preload = "none";
+  if (!video.paused) {
+    try {
+      video.pause();
+    } catch {
+      // Ignore pause failures while switching to the static background.
+    }
+  }
+
+  // Abort a download the markup already started; ensureSource re-adds a source if needed.
+  if (video.networkState === HTMLMediaElement.NETWORK_LOADING) {
+    video.querySelectorAll("source").forEach((source) => source.remove());
+    video.load();
+  }
 }
 
 function setVideoSource(video, src) {
@@ -174,6 +200,10 @@ function armWatchdog(video) {
     state.watchdogTimer = 0;
     if (document.hidden || video.paused || video.ended) return;
 
+    // Still downloading means a slow connection, not a bad source; keep the
+    // poster rather than restarting with the larger baseline file.
+    if (video.networkState === HTMLMediaElement.NETWORK_LOADING) return;
+
     const progressed = (video.currentTime || 0) > startTime + 0.05;
     if (!progressed && video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
       showPoster(video);
@@ -259,6 +289,8 @@ function bindResponsiveModeListener() {
 
   const onModeChange = (event) => {
     if (event.matches) {
+      // No <source> matched at load, so rerun source selection now that one does.
+      document.querySelector(".bg__video")?.load();
       initBackgroundVideo(document, { attemptPlayback: true });
       return;
     }
@@ -270,11 +302,6 @@ function bindResponsiveModeListener() {
       if (state.watchdogTimer) {
         window.clearTimeout(state.watchdogTimer);
         state.watchdogTimer = 0;
-      }
-      try {
-        video.pause();
-      } catch {
-        // Ignore pause failures while switching to the static background.
       }
     }
     useStaticBackgroundOnly(document);

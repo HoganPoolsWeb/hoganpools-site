@@ -1,7 +1,7 @@
-import { initBackgroundVideo } from "./background-video.js";
+import { initBackgroundVideo } from "./background-video.js?v=2";
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
 import { cleanupProcessPage, initProcessPage } from "./process-page.js";
-import { loadRoute } from "./router.js";
+import { loadRoute } from "./router.js?v=2";
 
 (() => {
   const HEADER_DEBUG_ENABLED = /(?:^|\?)headerdebug=1(?:&|$)/i.test(window.location.search);

@@ -4,7 +4,10 @@ const BG_VIDEO_QUERY = "(prefers-reduced-motion: no-preference)";
 const READY_TIMEOUT_MS = 3000;
 const WATCHDOG_MS = 3000;
 
+const HERO_READY_EVENTS = ["suspend", "error", "emptied"];
+
 const videoStates = new WeakMap();
+const heroesWaitedOn = new WeakSet();
 let lifecycleListenersBound = false;
 let responsiveModeListenerBound = false;
 
@@ -140,6 +143,28 @@ function ensureSource(video) {
   return setVideoSource(video, candidates[sourceIndex]);
 }
 
+// On the homepage, hold the decorative background until the hero video stops downloading. On a ~3 Mbps
+// link the two downloads competing delayed the hero's start from about 1s to 8s and then kept stalling it.
+// Only applies before the background has loaded anything.
+function deferUntilHeroReady(video) {
+  if (video.readyState > HTMLMediaElement.HAVE_NOTHING) return false;
+
+  const hero = document.querySelector(".home-hero-media__video");
+  if (!hero || hero.error || hero.networkState !== HTMLMediaElement.NETWORK_LOADING) return false;
+
+  if (!heroesWaitedOn.has(hero)) {
+    heroesWaitedOn.add(hero);
+    const resume = (event) => {
+      if (event.type === "suspend" && hero.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      HERO_READY_EVENTS.forEach((eventName) => hero.removeEventListener(eventName, resume, true));
+      initBackgroundVideo(document, { attemptPlayback: true });
+    };
+    // Capture so errors fired at the hero's <source> elements are seen too.
+    HERO_READY_EVENTS.forEach((eventName) => hero.addEventListener(eventName, resume, true));
+  }
+  return true;
+}
+
 function reveal(video) {
   video.closest(".bg")?.classList.add("is-video-ready");
 }
@@ -182,7 +207,9 @@ function waitForReadiness(video) {
     const failureEvents = ["error", "stalled", "abort"];
 
     events.forEach((eventName) => video.addEventListener(eventName, onReady, { once: true }));
-    failureEvents.forEach((eventName) => video.addEventListener(eventName, onFailure, { once: true }));
+    failureEvents.forEach((eventName) =>
+      video.addEventListener(eventName, onFailure, { once: true }),
+    );
     state.readyTimer = window.setTimeout(() => finish(false), READY_TIMEOUT_MS);
   });
   return state.readyPromise;
@@ -326,6 +353,11 @@ export function initBackgroundVideo(root = document, options = {}) {
     : root.querySelector?.(".bg__video") || document.querySelector(".bg__video");
   if (!video) return null;
 
+  if (deferUntilHeroReady(video)) {
+    document.documentElement.classList.add("bg-ready");
+    return null;
+  }
+
   ensureAttributes(video);
   ensureSource(video);
   bindElementListeners(video);
@@ -349,6 +381,7 @@ export function startBackgroundVideo(video = null, options = {}) {
 
   video = video || document.querySelector(".bg__video");
   if (!video || !video.isConnected || prefersReducedMotion()) return Promise.resolve(false);
+  if (deferUntilHeroReady(video)) return Promise.resolve(false);
 
   initBackgroundVideo(video);
 

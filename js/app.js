@@ -1,8 +1,12 @@
 // /js/app.js
-import { initBackgroundVideo, retryBackgroundVideoPlayback, startBackgroundVideo } from "./background-video.js";
+import {
+  initBackgroundVideo,
+  retryBackgroundVideoPlayback,
+  startBackgroundVideo,
+} from "./background-video.js?v=2";
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
 import { cleanupProcessPage, initProcessPage } from "./process-page.js";
-import { getRouteFromHref, getRouteFromLocation, loadRoute, routeToPath } from "./router.js";
+import { getRouteFromHref, getRouteFromLocation, loadRoute, routeToPath } from "./router.js?v=2";
 
 const app = document.getElementById("app");
 const siteHeader = document.getElementById("site-header");
@@ -679,11 +683,11 @@ function resetStageScrollPosition() {
   window.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
 }
 
-async function renderRouteIntoCurrent(route) {
+async function renderRouteIntoCurrent(route, options = {}) {
   cleanupProcessPage();
   syncRouteBodyClasses(route);
   await ensureRouteAssets(route);
-  const payload = await loadRoute(route, app);
+  const payload = await loadRoute(route, app, options);
   resetStageScrollPosition();
   syncStageShell(route, payload?.shell);
   syncHeaderNavState(route);
@@ -967,7 +971,10 @@ async function boot() {
   // Initial route load
   const initialRoute = getRouteFromLocation();
 
-  await renderRouteIntoCurrent(initialRoute);
+  // index.html already contains the home route, so keep it (and its hero video download) as is.
+  await renderRouteIntoCurrent(initialRoute, {
+    useCurrentDocument: initialRoute === "home" && Boolean(app?.querySelector(".home-stack")),
+  });
 
   const expectedPath = routeToPath(currentRoute);
 

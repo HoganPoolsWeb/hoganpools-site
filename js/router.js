@@ -91,7 +91,9 @@ function getRouteSeo(doc, fallbackUrl) {
     twitterTitle: getMetaContent(doc, 'meta[name="twitter:title"]'),
     twitterDescription: getMetaContent(doc, 'meta[name="twitter:description"]'),
     twitterImage: getMetaContent(doc, 'meta[name="twitter:image"]'),
-    jsonLd: Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map((script) => script.textContent || ""),
+    jsonLd: Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map(
+      (script) => script.textContent || "",
+    ),
   };
 }
 
@@ -103,10 +105,22 @@ function getRouteShell(doc, contentRoot) {
   };
 }
 
-export async function loadRoute(route, mountEl) {
+export async function loadRoute(route, mountEl, options = {}) {
   const url = routeToPath(route);
-  const res = await fetch(url, { cache: "no-store" });
   const targetEl = mountEl || document.getElementById("app");
+
+  // The server already rendered this route: reuse it rather than refetching and rebuilding it,
+  // which would also restart (and re-download) any media inside it.
+  if (options.useCurrentDocument) {
+    return {
+      html: null,
+      url,
+      seo: getRouteSeo(document, url),
+      shell: getRouteShell(document, targetEl),
+    };
+  }
+
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     if (targetEl) {
       targetEl.innerHTML = `<div class="container"><h1>Not found</h1><p>Missing: ${url}</p></div>`;

@@ -116,21 +116,6 @@
         ]
       }
     </script>
-    <script>
-      (function () {
-        var h = window.location.hash;
-        var isHome = !h || h === "#" || h === "#home";
-        if (!isHome) return;
-
-        var link = document.createElement("link");
-        link.rel = "preload";
-        link.as = "video";
-        link.href = "/assets/video/homeherovideo.mp4";
-        link.setAttribute("type", "video/mp4");
-        link.fetchPriority = "high";
-        document.head.appendChild(link);
-      })();
-    </script>
     <link
       rel="preload"
       as="image"
@@ -139,7 +124,7 @@
       imagesizes="100vw"
       fetchpriority="high"
     />
-    <link rel="stylesheet" href="/css/site.css?v=29" />
+    <link rel="stylesheet" href="/css/site.css?v=44" />
   </head>
   <body>
     <div class="bg" aria-hidden="true">
@@ -151,17 +136,25 @@
         fetchpriority="high"
         alt=""
       />
+      <!-- No autoplay/preload here: background-video.js starts it once the hero video stops downloading. -->
       <video
         class="bg__video"
-        autoplay
         muted
         loop
         playsinline
-        preload="metadata"
+        preload="none"
         poster="/assets/img-webp/img-bg-poster-full-jpg-1440.webp"
       >
-        <source src="/assets/video/water720p.mp4" type="video/mp4" media="(prefers-reduced-motion: no-preference)" />
-        <source src="/assets/video/water720p-baseline.mp4" type="video/mp4" media="(prefers-reduced-motion: no-preference)" />
+        <source
+          src="/assets/video/water720p.mp4"
+          type="video/mp4"
+          media="(prefers-reduced-motion: no-preference)"
+        />
+        <source
+          src="/assets/video/water720p-baseline.mp4"
+          type="video/mp4"
+          media="(prefers-reduced-motion: no-preference)"
+        />
       </video>
     </div>
 
@@ -298,10 +291,31 @@
                     width="1440"
                     height="900"
                   >
-                    <source src="/assets/video/homeherovideo.mp4" type="video/mp4" />
+                    <source
+                      src="/assets/video/homeherovideo.mp4"
+                      type="video/mp4"
+                      media="(min-width: 821px) and (min-height: 501px) and (prefers-reduced-motion: no-preference)"
+                    />
+                    <source
+                      src="/assets/video/homeherovideo-mobile.mp4"
+                      type="video/mp4"
+                      media="(prefers-reduced-motion: no-preference)"
+                    />
                     <!-- Fallback image for very old browsers -->
                     <img src="/assets/hero/hero-hero_first_frame-jpg-768.webp" alt="" />
                   </video>
+                  <img
+                    class="home-hero-media__still"
+                    src="/assets/hero/hero-hero_first_frame-jpg-768.webp"
+                    srcset="
+                      /assets/hero/hero-hero_first_frame-jpg-768.webp   768w,
+                      /assets/hero/hero-hero_first_frame-jpg-1440.webp 1440w
+                    "
+                    sizes="(max-width: 820px) 100vw, 1100px"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <div class="home-hero-media__overlay"></div>
                   <div class="home-hero-media__content" hidden>
                     <div class="home-hero-media__eyebrow">Our Passion:</div>
@@ -447,7 +461,9 @@
                         <a class="footer__link footer__privacy" href="/privacy-policy/">
                           Privacy Policy
                         </a>
-                        <time datetime="2026-10-30"> &nbsp;·&nbsp; Last updated October 30, 2026</time>
+                        <time datetime="2026-10-30">
+                          &nbsp;·&nbsp; Last updated October 30, 2026</time
+                        >
                       </div>
 
                       <div class="footer__contact">
@@ -480,6 +496,6 @@
     </main>
 
     <!-- Load app as ES6 module -->
-    <script type="module" src="/js/app.js?v=7"></script>
+    <script type="module" src="/js/app.js?v=8"></script>
   </body>
 </html>

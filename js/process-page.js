@@ -1,6 +1,7 @@
 const INTERVAL_MS = 5000;
 const slideshowCleanups = new WeakMap();
 const toggleCleanups = new WeakMap();
+const videoCleanups = new WeakMap();
 const activeProcessCleanups = new Set();
 
 function isInDocument(element) {
@@ -208,6 +209,32 @@ function initSlideshow(slideshowEl) {
   observer.observe(slideshowEl);
 }
 
+// Off-screen loops start (and download) only once scrolled into view. Firefox otherwise downloads
+// the whole file at page load even though the video is far below the fold.
+function initVisibleVideo(video) {
+  if (videoCleanups.has(video)) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        video.play()?.catch(() => {});
+      } else {
+        video.pause();
+      }
+    });
+  });
+  observer.observe(video);
+
+  const cleanup = () => {
+    observer.disconnect();
+    videoCleanups.delete(video);
+    activeProcessCleanups.delete(cleanup);
+  };
+
+  videoCleanups.set(video, cleanup);
+  activeProcessCleanups.add(cleanup);
+}
+
 function initProcessStepToggle(button) {
   if (toggleCleanups.has(button)) return;
 
@@ -255,4 +282,8 @@ export function initProcessPage(root = document) {
   processRoot
     .querySelectorAll(".process-step__toggle")
     .forEach((button) => initProcessStepToggle(button));
+
+  processRoot
+    .querySelectorAll("video[data-play-when-visible]")
+    .forEach((video) => initVisibleVideo(video));
 }

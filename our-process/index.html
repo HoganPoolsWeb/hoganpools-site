@@ -163,13 +163,13 @@
         fetchpriority="high"
         alt=""
       />
+      <!-- No autoplay/preload here: background-video.js starts it once the page has loaded. -->
       <video
         class="bg__video"
-        autoplay
         muted
         loop
         playsinline
-        preload="metadata"
+        preload="none"
         poster="/assets/img-webp/img-bg-poster-full-jpg-1440.webp"
       >
         <source
@@ -298,16 +298,22 @@
                 <section class="process-hero-media">
                   <div class="process-hero-media__media">
                     <video
-                      src="/assets/video/process.mp4"
                       class="process-hero-media__video"
                       autoplay
                       muted
                       loop
                       playsinline
                       preload="metadata"
-                      poster="/assets/img/gunite-process.jpg"
+                      poster="/assets/img-webp/process-hero-poster-960.webp"
                       aria-label="Custom gunite pool in a backyard"
-                    ></video>
+                    >
+                      <source
+                        src="/assets/video/process.mp4"
+                        type="video/mp4"
+                        media="(min-width: 821px) and (min-height: 501px)"
+                      />
+                      <source src="/assets/video/process-mobile.mp4" type="video/mp4" />
+                    </video>
                     <div class="process-hero-media__overlay"></div>
                     <div class="process-hero-media__content">
                       <!-- <div class="process-hero-media__eyebrow">Custom Gunite Pools</div> -->
@@ -383,19 +389,44 @@
                   <div class="process-row__slideshow" aria-label="Step 2 photo slideshow">
                     <div class="process-row__slides">
                       <div class="process-row__slide is-active">
-                        <img src="/assets/process/step-02-a.webp" alt="Excavation — image 1" loading="lazy" decoding="async" />
+                        <img
+                          src="/assets/process/step-02-a-1280.webp"
+                          alt="Excavation — image 1"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </div>
                       <div class="process-row__slide">
-                        <img src="/assets/process/step-02-b.webp" alt="Excavation — image 2" loading="lazy" decoding="async" />
+                        <img
+                          src="/assets/process/step-02-b-1280.webp"
+                          alt="Excavation — image 2"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </div>
                       <div class="process-row__slide">
-                        <img src="/assets/process/step-02-c.webp" alt="Excavation — image 3" loading="lazy" decoding="async" />
+                        <img
+                          src="/assets/process/step-02-c-1280.webp"
+                          alt="Excavation — image 3"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </div>
                       <div class="process-row__slide">
-                        <img src="/assets/process/step-02-d.webp" alt="Excavation — image 4" loading="lazy" decoding="async" />
+                        <img
+                          src="/assets/process/step-02-d-1280.webp"
+                          alt="Excavation — image 4"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </div>
                       <div class="process-row__slide">
-                        <img src="/assets/process/step-02-e.webp" alt="Excavation — image 5" loading="lazy" decoding="async" />
+                        <img
+                          src="/assets/process/step-02-e-1280.webp"
+                          alt="Excavation — image 5"
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </div>
                     </div>
 
@@ -630,12 +661,12 @@
                       <video
                         src="/assets/video/processR.mp4"
                         class="process-media-block__video"
-                        autoplay
+                        data-play-when-visible
                         muted
                         loop
                         playsinline
-                        preload="metadata"
-                        poster="/assets/img/gunite-process.jpg"
+                        preload="none"
+                        poster="/assets/img-webp/process-timelapse-poster-960.webp"
                         aria-label="Gunite pool construction time-lapse"
                       ></video>
                     </div>
@@ -700,6 +731,6 @@
       </div>
     </main>
 
-    <script type="module" src="/js/static-page.js?v=9"></script>
+    <script type="module" src="/js/static-page.js?v=10"></script>
   </body>
 </html>

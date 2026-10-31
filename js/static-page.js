@@ -1,6 +1,6 @@
-import { initBackgroundVideo } from "./background-video.js?v=2";
+import { initBackgroundVideo } from "./background-video.js?v=3";
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
-import { cleanupProcessPage, initProcessPage } from "./process-page.js";
+import { cleanupProcessPage, initProcessPage } from "./process-page.js?v=2";
 import { loadRoute } from "./router.js?v=2";
 
 (() => {

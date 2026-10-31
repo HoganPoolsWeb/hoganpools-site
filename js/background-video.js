@@ -9,6 +9,7 @@ const HERO_READY_EVENTS = ["suspend", "error", "emptied"];
 const videoStates = new WeakMap();
 const heroesWaitedOn = new WeakSet();
 let lifecycleListenersBound = false;
+let pageLoadWaitBound = false;
 let responsiveModeListenerBound = false;
 
 function prefersReducedMotion() {
@@ -141,6 +142,20 @@ function ensureSource(video) {
   const sourceIndex = Math.min(state.sourceIndex, candidates.length - 1);
   state.sourceIndex = sourceIndex;
   return setVideoSource(video, candidates[sourceIndex]);
+}
+
+// Let the page's own images load before the decorative loop starts downloading. On a slow link the
+// 1.6 MB loop otherwise shares bandwidth with the photos in view and delays them by several seconds.
+function deferUntilPageLoaded(video) {
+  if (video.readyState > HTMLMediaElement.HAVE_NOTHING) return false;
+  if (document.readyState === "complete") return false;
+
+  if (!pageLoadWaitBound) {
+    pageLoadWaitBound = true;
+    const resume = () => initBackgroundVideo(document, { attemptPlayback: true });
+    window.addEventListener("load", resume, { once: true });
+  }
+  return true;
 }
 
 // On the homepage, hold the decorative background until the hero video stops downloading. On a ~3 Mbps
@@ -353,7 +368,7 @@ export function initBackgroundVideo(root = document, options = {}) {
     : root.querySelector?.(".bg__video") || document.querySelector(".bg__video");
   if (!video) return null;
 
-  if (deferUntilHeroReady(video)) {
+  if (deferUntilPageLoaded(video) || deferUntilHeroReady(video)) {
     document.documentElement.classList.add("bg-ready");
     return null;
   }
@@ -381,7 +396,7 @@ export function startBackgroundVideo(video = null, options = {}) {
 
   video = video || document.querySelector(".bg__video");
   if (!video || !video.isConnected || prefersReducedMotion()) return Promise.resolve(false);
-  if (deferUntilHeroReady(video)) return Promise.resolve(false);
+  if (deferUntilPageLoaded(video) || deferUntilHeroReady(video)) return Promise.resolve(false);
 
   initBackgroundVideo(video);
 

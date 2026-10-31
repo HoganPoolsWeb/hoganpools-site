@@ -3,9 +3,9 @@ import {
   initBackgroundVideo,
   retryBackgroundVideoPlayback,
   startBackgroundVideo,
-} from "./background-video.js?v=2";
+} from "./background-video.js?v=3";
 import { initObfuscatedPhoneLinks } from "./obfuscated-phone-links.js";
-import { cleanupProcessPage, initProcessPage } from "./process-page.js";
+import { cleanupProcessPage, initProcessPage } from "./process-page.js?v=2";
 import { getRouteFromHref, getRouteFromLocation, loadRoute, routeToPath } from "./router.js?v=2";
 
 const app = document.getElementById("app");

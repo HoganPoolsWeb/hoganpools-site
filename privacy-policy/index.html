@@ -144,13 +144,13 @@
         fetchpriority="high"
         alt=""
       />
+      <!-- No autoplay/preload here: background-video.js starts it once the page has loaded. -->
       <video
         class="bg__video"
-        autoplay
         muted
         loop
         playsinline
-        preload="metadata"
+        preload="none"
         poster="/assets/img-webp/img-bg-poster-full-jpg-1440.webp"
       >
         <source
@@ -454,6 +454,6 @@
 
 
     <!-- Load app as ES6 module -->
-    <script type="module" src="/js/app.js?v=8"></script>
+    <script type="module" src="/js/app.js?v=9"></script>
   </body>
 </html>
